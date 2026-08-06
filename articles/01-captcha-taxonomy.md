@@ -1,6 +1,6 @@
 # CAPTCHA 类型学：从图片到无感挑战
 
-> 防御视角笔记 · 第 1 篇
+> 防御视角笔记 · 第 1 篇 · **作者：[DF-Guan](https://github.com/DF-Guan)**
 > 主题：现代 CAPTCHA 的形态演进与各自的设计权衡
 
 ---
