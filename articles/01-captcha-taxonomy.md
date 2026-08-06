@@ -1,13 +1,23 @@
 # CAPTCHA 类型学：从图片到无感挑战
 
-> 防御视角笔记 · 第 1 篇 · **作者：[DF-Guan](https://github.com/DF-Guan)**
-> 主题：现代 CAPTCHA 的形态演进与各自的设计权衡
+> **编号**：No. 1 · **作者**：[DF-Guan](https://github.com/DF-Guan) · **语言**：[English](./01-captcha-taxonomy.en.md) | 中文
+> **许可**：CC BY-NC 4.0 · **定位**：防御与研究视角的机制笔记，不含任何可运行实现
 
 ---
 
-## 1. 为什么需要 CAPTCHA
+## 摘要
 
-CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区分"真人"与"程序"**。注册、登录、评论、投票等场景一旦可以被程序批量驱动，就会出现垃圾内容、虚假账号、刷量等问题。「自动图灵测试」这一概念由 von Ahn 等人在 2003 年正式提出，其定义要求：计算机程序能自动生成并评判测试，且几乎所有人类都能通过、而当时的计算机程序几乎无法通过<sup>[1]</sup>；2004 年他们又在《Communications of the ACM》上给出了更完整的阐述<sup>[2]</sup>。
+CAPTCHA（Completely Automated Public Turing test to tell Computers and Humans Apart）是现代 Web 上区分"真人"与"程序"的基础设施。本文以防御视角梳理其形态演进：从经典文字/图片验证码，到 reCAPTCHA v2、hCaptcha 等信号评分型方案，再到 Turnstile 等无感挑战与无头浏览器指纹。通过文献与工程实践两条线索，逐类分析其识别原理、对真人的负担、对自动化程序的对抗能力，以及各自的成本天花板。
+
+**关键词**：CAPTCHA；人机区分；设备指纹；无感挑战；反滥用
+
+---
+
+## 1. 引言：为什么需要 CAPTCHA
+
+CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，自动区分"真人"与"程序"**。注册、登录、评论、投票等场景一旦可以被程序批量驱动，就会出现垃圾内容、虚假账号、刷量等问题。
+
+「自动图灵测试」这一概念由 von Ahn 等人在 2003 年正式提出<sup>[1]</sup>：一个合格的 CAPTCHA 必须满足——计算机程序能够自动生成并评判测试；几乎所有人类都能通过；而同时代的计算机程序几乎无法通过。2004 年，他们又在《Communications of the ACM》上给出了更完整的阐述<sup>[2]</sup>。
 
 所有 CAPTCHA 本质上都是在做一个**代价博弈**：
 
@@ -37,7 +47,7 @@ CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区�
 
 **代价**
 - 对真人：干扰严重，尤其对可访问性不友好
-- 对运营方：OCR/深度学习模型对扭曲文字破解率高，属于"劳动密集型但不保险"的手段。早在 2008 年，von Ahn 等人的 reCAPTCHA 论文就已说明：当时的 OCR 对扫描文字的错误率约为 20%，于是他们反过来把「人脑识别」打包成众包——人验证的同时顺便完成数字化任务<sup>[3]</sup>
+- 对运营方：OCR/深度学习模型对扭曲文字破解率高，属于"劳动密集型但不保险"的手段。其历史背景是：早期 OCR 对老旧印刷品（褪色、泛黄）无法识别约 20% 的单词，von Ahn 等人于是把「人脑识别」打包成众包——人验证的同时顺便完成古籍数字化，即 reCAPTCHA<sup>[3]</sup>
 - 现状：已基本退出主流商业站点，多残留在老旧论坛系统（如一些传统 BBS 自建题）中
 
 ### 2.2 reCAPTCHA v2（"I'm not a robot" 复选框）
@@ -51,7 +61,7 @@ CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区�
 **代价**
 - 对真人：很低（多数情况一下点击）
 - 对程序：可通过大量预渲染模拟交互信号绕过——**它防的是"机械操作"，防不住"模拟真人"**
-- 局限：依赖服务端模型质量，且每年都被攻防拉锯。Bursztein 等人在 CHI 2014 的研究曾系统测过各类验证码的真实通过率（人类可到 95% 以上），并明确提出「验证码不应被孤立使用，而应与其他反滥用机制组合」——这几乎是后来所有厂商的设计共识<sup>[4]</sup>
+- 局限：依赖服务端模型质量，且每年都被攻防拉锯。Bursztein 等人在 CHI 2014 的实测显示，为 Google 设计的更易用验证码人类通过率可达 95.3%，并明确指出**验证码不应被孤立使用**，而应作为整体反滥用系统的一部分<sup>[4]</sup>
 
 ### 2.3 hCaptcha
 
@@ -91,7 +101,7 @@ CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区�
 **代价**
 - 对真人：透明无感
 - 对程序：专门针对"自动化浏览器"的已知特征，需要持续对抗检测规则更新
-- 指纹的数学基础：Eckersley 在 2010 年的研究用 18.1 bits 熵描述浏览器指纹的信息量——在带 Flash/Java 的环境中，约 94.2% 的浏览器指纹是唯一的；这意味着「设备指纹」确实能撑起区分度，但同时也带来误伤与隐私问题<sup>[5]</sup>
+- 指纹的数学基础：Eckersley 在 2010 年的研究给出浏览器指纹约 18.1 bits 的信息熵，带 Flash/Java 的环境中约 94.2% 的浏览器指纹唯一<sup>[5]</sup>——这说明「设备指纹」确有区分度，但它的"唯一性"同样意味着对隐私浏览器、企业网络、公共 IP 用户的高误伤与隐私代价
 
 ---
 
@@ -111,7 +121,7 @@ CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区�
 
 ## 4. 演进规律总结
 
-1. **从"出题"到"检查"**：让真人做题的体验成本太高，商业站点全面转向"对程序做行为/环境评分"。这背后有硬数据支撑：Bursztein 等人在 USENIX WOOT 2014 证明了「基于文字的传统验证码已到尽头」——通用机器学习方案在所有实测验证码上都超过了 1% 的不安全阈值（Yahoo 5.33%、eBay 3.7%、ReCaptcha 33.34% 等），文章标题直接叫《The End is Nigh》<sup>[6]</sup>；同年另一篇对音频验证码的系统研究也显示其成功率可达 45%-49%<sup>[7]</sup>
+1. **从"出题"到"检查"**：让真人做题的体验成本太高，商业站点全面转向"对程序做行为/环境评分"。这背后有硬数据支撑：Bursztein 等人提出，一旦自动方案成功率超过约 1%，该验证码即视为实际不安全<sup>[6]</sup>；他们的 WOOT 2014 研究进一步显示，基于文字的经典验证码已接近尽头——在不调整参数的情况下，通用机器学习方案即可在 Yahoo 达到 5.33%、ReCaptcha 22.67%、eBay 51.39%、CNN 51.09% 的破解成功率，全部显著超过 1% 阈值<sup>[7]</sup>。音频验证码同样脆弱：专用系统可破解微软约 48.9%、雅虎约 45.5% 的音频验证码，且往往比人类更准<sup>[8]</sup>
 2. **信誉成为新战场**：IP 信誉、设备信誉、账号历史信誉，正在替代"一道题"的作用
 3. **多因子组合 > 单点**：强站点往往"表单校验 + 无感挑战 + 后续验证流程"层层叠加（见第 2 篇）
 4. **没有银弹**：每一类都有各自的成本天花板——感知型伤体验、无感型依赖信誉、指纹型依赖特征库——这就是它们至今共存的原因
@@ -125,15 +135,16 @@ CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区�
 
 ## 参考资料
 
-1. von Ahn, L., Blum, M., Hopper, N. J., & Langford, J. (2003). *CAPTCHA: Using Hard AI Problems for Security.* In: EUROCRYPT 2003, LNCS 2656, pp. 294–311. DOI: [10.1007/3-540-39200-9_18](https://doi.org/10.1007/3-540-39200-9_18)
-2. von Ahn, L., Blum, M., & Langford, J. (2004). *Telling Humans and Computers Apart Automatically.* Communications of the ACM, 47(2), 56–60. DOI: [10.1145/966389.966390](https://doi.org/10.1145/966389.966390)
-3. von Ahn, L., Maurer, B., McMillen, C., Abraham, D., & Blum, M. (2008). *reCAPTCHA: Human-Based Character Recognition via Web Security Measures.* Science, 322(5898), 1465–1468. DOI: [10.1126/science.1160379](https://doi.org/10.1126/science.1160379)
-4. Bursztein, E., Moscicki, A., Fabry, C., Bethard, S., Jurafsky, D., & Mitchell, J. C. (2014). *Easy Does It: More Usable CAPTCHAs.* In: Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI 2014). ACM.
-5. Eckersley, P. (2010). *How Unique Is Your Web Browser?* In: Privacy Enhancing Technologies (PETS 2010), LNCS 6205, pp. 1–18. DOI: [10.1007/978-3-642-14527-8_1](https://doi.org/10.1007/978-3-642-14527-8_1)
-6. Bursztein, E., et al. (2014). *The End is Nigh: Generic Solving of Text-based CAPTCHAs.* In: 8th USENIX Workshop on Offensive Technologies (WOOT 2014). USENIX.
-7. Bursztein, E., Beauxis, R., Paskov, H., Perito, D., Fabry, C., & Mitchell, J. (2011). *The Failure of Noise-Based Non-continuous Audio CAPTCHAs.* In: IEEE Symposium on Security and Privacy (S&P 2011), pp. 19–31. DOI: [10.1109/SP.2011.14](https://doi.org/10.1109/SP.2011.14)
+1. L. von Ahn, M. Blum, N. J. Hopper, and J. Langford, "CAPTCHA: Using hard AI problems for security," in *Advances in Cryptology — EUROCRYPT 2003*, LNCS 2656, Springer, 2003, pp. 294–311. DOI: [10.1007/3-540-39200-9_18](https://doi.org/10.1007/3-540-39200-9_18)
+2. L. von Ahn, M. Blum, and J. Langford, "Telling humans and computers apart automatically," *Communications of the ACM*, vol. 47, no. 2, pp. 56–60, 2004. DOI: [10.1145/966389.966390](https://doi.org/10.1145/966389.966390)
+3. L. von Ahn, B. Maurer, C. McMillen, D. Abraham, and M. Blum, "reCAPTCHA: Human-based character recognition via web security measures," *Science*, vol. 322, no. 5898, pp. 1465–1468, 2008. DOI: [10.1126/science.1160379](https://doi.org/10.1126/science.1160379)
+4. E. Bursztein, A. Moscicki, C. Fabry, S. Bethard, D. Jurafsky, and J. C. Mitchell, "Easy does it: More usable CAPTCHAs," in *Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI 2014)*, ACM, 2014, pp. 2637–2646. DOI: [10.1145/2556288.2557322](https://doi.org/10.1145/2556288.2557322)
+5. P. Eckersley, "How unique is your web browser?," in *Privacy Enhancing Technologies (PETS 2010)*, LNCS 6205, Springer, 2010, pp. 1–18. DOI: [10.1007/978-3-642-14527-8_1](https://doi.org/10.1007/978-3-642-14527-8_1)
+6. E. Bursztein, M. Martin, and J. C. Mitchell, "Text-based CAPTCHA strengths and weaknesses," in *Proceedings of the 18th ACM Conference on Computer and Communications Security (CCS 2011)*, ACM, 2011, pp. 125–138. DOI: [10.1145/2046707.2046724](https://doi.org/10.1145/2046707.2046724)
+7. E. Bursztein, J. Aigrain, A. Moscicki, and J. C. Mitchell, "The end is nigh: Generic solving of text-based CAPTCHAs," in *8th USENIX Workshop on Offensive Technologies (WOOT 2014)*, USENIX, 2014.
+8. E. Bursztein, R. Beauxis, H. Paskov, D. Perito, C. Fabry, and J. Mitchell, "The failure of noise-based non-continuous audio CAPTCHAs," in *IEEE Symposium on Security and Privacy (S&P 2011)*, IEEE, 2011, pp. 19–31. DOI: [10.1109/SP.2011.14](https://doi.org/10.1109/SP.2011.14)
 
-> 说明：以上文献均来自公开检索，仅作机制论述的佐证；标注形式遵循常见引用规范，页码/卷期以原刊为准。
+> 说明：以上文献均经公开检索核验。引用格式遵循 IEEE 参考规范；页码、卷期以原刊为准。本文仅作机制论述的学术佐证，不含任何绕过实现。
 
 ---
 

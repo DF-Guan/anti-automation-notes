@@ -1,13 +1,19 @@
 # 注册滥用防御矩阵：服务端能做些什么
 
-> 防御视角笔记 · 第 3 篇 · **作者：[DF-Guan](https://github.com/DF-Guan)**
-> 主题：抛开"验证码本身"，服务端还有哪些抗滥用手段，以及各自代价
+> **编号**：No. 3 · **作者**：[DF-Guan](https://github.com/DF-Guan) · **语言**：[English](./03-abuse-defense-matrix.en.md) | 中文
+> **许可**：CC BY-NC 4.0 · **定位**：防御与研究视角的机制笔记，不含任何可运行实现
+
+---
+
+## 摘要
+
+前两篇分别讨论注册入口的机器识别（CAPTCHA）与注册之后的账号验证（流程）。本篇文章把视角放大到服务端在请求落地前后的**完整防御分层**：入口层、表单/路由层、身份层、策略层、数据层。核心论点是——任何单一手段都有短板，**强度来自组合与纵深**；并且手段之间存在"替代关系"，选择的关键在于"自己付得起哪种代价"。最后给出一个对注册流程强度的合法评估清单。
+
+**关键词**：反滥用；分层防御；速率限制；IP 信誉；临时邮箱；行为风控
 
 ---
 
 ## 1. 一个总览：防御是分层的
-
-前两篇讲的是"注册入口"的识别（CAPTCHA）与"注册之后"的验证（流程）。这一篇把视角放大：**服务端在请求落地前后的完整防御层**。
 
 ```
   入口层   表单/路由层   身份层      策略层        数据层
@@ -27,7 +33,7 @@
 
 - **WAF / 反爬中间件**：对可疑 UA、无 Cookie、异常请求头直接阻断；部分实现会在连接层就重置（表现为请求失败/空响应）
 - **JS 挑战**：先执行一段脚本做"人机握手"，失败则看不到任何表单
-- **指纹采集**：把浏览器环境 hash 进会话，异常环境在后续任何一步都能被回溯。指纹的区分度有实证基础：Eckersley 的研究给出浏览器指纹约 18.1 bits 熵，带插件环境下 94.2% 的浏览器唯一——但正是这个"唯一性"，也意味着它对隐私浏览器/企业网络/公共 IP 的用户更可能产生误伤<sup>[5]</sup>
+- **指纹采集**：把浏览器环境 hash 进会话，异常环境在后续任何一步都能被回溯。指纹的区分度有实证基础：Eckersley 的测量给出浏览器指纹约 18.1 bits 的信息熵，带插件环境下约 94.2% 的浏览器唯一<sup>[1]</sup>——但正是这个"唯一性"，也意味着它对隐私浏览器/企业网络/公共 IP 的用户更可能产生误伤
 
 **典型代价**
 - 误伤正常用户（尤其是隐私保护浏览器、企业网络、公共 IP）
@@ -51,8 +57,8 @@
 
 ### 2.4 策略层：按信誉与上下文动态决策
 
-- **临时邮箱域名封锁**：维护"一次性邮箱域名"黑名单，命中即在建号时拒绝。这是性价比极高的手段——一次性邮箱服务的域名可批量注册，但域名池是有限的；其成本与风险（账号被劫持、隐私滥用）在学术上也有过量化分析<sup>[8]</sup>。但纯黑名单对新域名天然滞后，已有研究用 NLP 特征将其检测率提升到 97%<sup>[9]</sup>
-- **速率限制 / 滑动窗口**：按 IP、设备、指纹维度限制注册与登录频率。它的必要性来自一个量化的"不安全阈值"：学术上通常把**成功率高于 1%** 视为验证/防护被攻破（WOOT 2014 的判别标准）——攻击者只需每个账号花费极低概率的成本，就能在规模上击穿单点防护，因此速率限制是把"低成本批量尝试"挡在门外的最后防线<sup>[6]</sup>
+- **临时邮箱域名封锁**：维护"一次性邮箱域名"黑名单，命中即在建号时拒绝。这是性价比极高的手段——临时邮箱服务的域名可批量注册，但域名池是有限的；其"账号易被劫持"的风险面在学术上也有量化分析<sup>[2]</sup>。但纯黑名单对新域名天然滞后，已有研究用 NLP 特征将其检测率提升到 97%<sup>[3]</sup>
+- **速率限制 / 滑动窗口**：按 IP、设备、指纹维度限制注册与登录频率。它的必要性来自一个量化的"不安全阈值"：学术上通常把**成功率高于约 1%** 视为验证码/防护被攻破——这一标准由 Bursztein 等人在 CCS 2011 提出<sup>[4]</sup>，并在 WOOT 2014 被再次验证（Yahoo 5.33%、eBay 51.39% 等全部超阈）<sup>[5]</sup>。攻击者只需在低成本下做到千分之一到百分之一的成功率，就能在规模上击穿单点防护，因此速率限制是把"低成本批量尝试"挡在门外的最后防线
 - **IP 信誉**：数据中心的出口 IP、代理/共享 IP 段直接降权；无感挑战（如 Turnstile）的实现就依赖这一层
 - **网络策略**：对某些国家/地区的流量直接按政策拒绝
 
@@ -83,7 +89,7 @@
 | 短信通道成本 | 邮箱 + 域名封锁 | 域名池有限，会被轮换绕过 |
 | 成熟的验证码厂商 | 知识问答 + 人工审批 | 体验差、人力高 |
 
-**没有哪一层是免费的**：要么贵在成本，要么贵在误伤，要么贵在人力。防御方只能选择"自己最付得起的代价"。这也呼应了学术界的共识——验证码/挑战机制**不应被孤立依赖**，而应与整体反滥用体系组合使用<sup>[4]</sup>。
+**没有哪一层是免费的**：要么贵在成本，要么贵在误伤，要么贵在人力。防御方只能选择"自己最付得起的代价"。这也呼应了学术界对验证码/挑战机制的共识——**不应被孤立依赖**，而应与整体反滥用体系组合使用<sup>[6]</sup>。
 
 ---
 
@@ -111,13 +117,14 @@
 
 ## 参考资料
 
-4. Bursztein, E., Moscicki, A., Fabry, C., Bethard, S., Jurafsky, D., & Mitchell, J. C. (2014). *Easy Does It: More Usable CAPTCHAs.* In: Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI 2014). ACM.
-5. Eckersley, P. (2010). *How Unique Is Your Web Browser?* In: Privacy Enhancing Technologies (PETS 2010), LNCS 6205, pp. 1–18. DOI: [10.1007/978-3-642-14527-8_1](https://doi.org/10.1007/978-3-642-14527-8_1)
-6. Bursztein, E., et al. (2014). *The End is Nigh: Generic Solving of Text-based CAPTCHAs.* In: 8th USENIX Workshop on Offensive Technologies (WOOT 2014). USENIX.
-8. Hu, H., & Wang, G. (2019). *Characterizing Pixel Tracking through the Lens of Disposable Email Services.* In: 40th IEEE Symposium on Security and Privacy (S&P 2019), pp. 365–379. DOI: [10.1109/SP.2019.00033](https://doi.org/10.1109/SP.2019.00033)
-9. Alanazi, R., & Alanazi, S. (2024). *A hybrid NLP and domain validation technique for disposable email detection.* Alexandria Engineering Journal, 102, 200–210. DOI: [10.1016/j.aej.2024.05.068](https://doi.org/10.1016/j.aej.2024.05.068)
+1. P. Eckersley, "How unique is your web browser?," in *Privacy Enhancing Technologies (PETS 2010)*, LNCS 6205, Springer, 2010, pp. 1–18. DOI: [10.1007/978-3-642-14527-8_1](https://doi.org/10.1007/978-3-642-14527-8_1)
+2. H. Hu, P. Peng, and G. Wang, "Characterizing pixel tracking through the lens of disposable email services," in *IEEE Symposium on Security and Privacy (S&P 2019)*, IEEE, 2019, pp. 365–379. DOI: [10.1109/SP.2019.00033](https://doi.org/10.1109/SP.2019.00033)
+3. R. Alanazi and S. Alanazi, "A hybrid NLP and domain validation technique for disposable email detection," *Alexandria Engineering Journal*, vol. 102, pp. 200–210, 2024. DOI: [10.1016/j.aej.2024.05.068](https://doi.org/10.1016/j.aej.2024.05.068)
+4. E. Bursztein, M. Martin, and J. C. Mitchell, "Text-based CAPTCHA strengths and weaknesses," in *Proceedings of the 18th ACM Conference on Computer and Communications Security (CCS 2011)*, ACM, 2011, pp. 125–138. DOI: [10.1145/2046707.2046724](https://doi.org/10.1145/2046707.2046724)
+5. E. Bursztein, J. Aigrain, A. Moscicki, and J. C. Mitchell, "The end is nigh: Generic solving of text-based CAPTCHAs," in *8th USENIX Workshop on Offensive Technologies (WOOT 2014)*, USENIX, 2014.
+6. E. Bursztein, A. Moscicki, C. Fabry, S. Bethard, D. Jurafsky, and J. C. Mitchell, "Easy does it: More usable CAPTCHAs," in *Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI 2014)*, ACM, 2014, pp. 2637–2646. DOI: [10.1145/2556288.2557322](https://doi.org/10.1145/2556288.2557322)
 
-> 编号接续第 1、2 篇。说明：以上文献均来自公开检索，仅作机制论述的佐证；标注形式遵循常见引用规范，页码/卷期以原刊为准。
+> 说明：以上文献均经公开检索核验。引用格式遵循 IEEE 参考规范；页码、卷期以原刊为准。本文仅作机制论述的学术佐证，不含任何绕过实现。
 
 ---
 

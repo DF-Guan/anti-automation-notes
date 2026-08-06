@@ -24,11 +24,11 @@
 
 ## Table of Contents
 
-| # | 文章 | 主题 |
-|---|------|------|
-| 1 | [CAPTCHA 类型学：从图片到无感挑战](./articles/01-captcha-taxonomy.md) | reCAPTCHA / hCaptcha / Turnstile / 图片验证码 / 无头浏览器指纹的形态与演进 |
-| 2 | [验证流程形态学：账号注册的几种"门"](./articles/02-verification-flow-patterns.md) | 邮箱验证码 / magic-link / 手机短信 / 知识问答 / 人工审批的设计模式对照 |
-| 3 | [注册滥用防御矩阵：服务端能做些什么](./articles/03-abuse-defense-matrix.md) | 从表单校验到网络策略：抗滥用手段的分层盘点与各自代价 |
+| # | 文章 (Article) | 中文 | English | 主题 (Topic) |
+|---|---|---|---|---|
+| 1 | CAPTCHA 类型学 (A Taxonomy of CAPTCHAs) | [中文](./articles/01-captcha-taxonomy.md) | [EN](./articles/01-captcha-taxonomy.en.md) | reCAPTCHA / hCaptcha / Turnstile / 图片验证码 / 无头浏览器指纹的形态与演进 |
+| 2 | 验证流程形态学 (A Morphology of Verification Flows) | [中文](./articles/02-verification-flow-patterns.md) | [EN](./articles/02-verification-flow-patterns.en.md) | 邮箱验证码 / magic-link / 手机短信 / 知识问答 / 人工审批的设计模式对照 |
+| 3 | 注册滥用防御矩阵 (An Abuse-Defense Matrix for Registration) | [中文](./articles/03-abuse-defense-matrix.md) | [EN](./articles/03-abuse-defense-matrix.en.md) | 从表单校验到网络策略：抗滥用手段的分层盘点与各自代价 |
 
 ## Key Concepts at a Glance
 
