@@ -7,7 +7,7 @@
 
 ## 1. 为什么需要 CAPTCHA
 
-CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区分"真人"与"程序"**。注册、登录、评论、投票等场景一旦可以被程序批量驱动，就会出现垃圾内容、虚假账号、刷量等问题。
+CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区分"真人"与"程序"**。注册、登录、评论、投票等场景一旦可以被程序批量驱动，就会出现垃圾内容、虚假账号、刷量等问题。「自动图灵测试」这一概念由 von Ahn 等人在 2003 年正式提出，其定义要求：计算机程序能自动生成并评判测试，且几乎所有人类都能通过、而当时的计算机程序几乎无法通过<sup>[1]</sup>；2004 年他们又在《Communications of the ACM》上给出了更完整的阐述<sup>[2]</sup>。
 
 所有 CAPTCHA 本质上都是在做一个**代价博弈**：
 
@@ -37,7 +37,7 @@ CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区�
 
 **代价**
 - 对真人：干扰严重，尤其对可访问性不友好
-- 对运营方：OCR/深度学习模型对扭曲文字破解率高，属于"劳动密集型但不保险"的手段
+- 对运营方：OCR/深度学习模型对扭曲文字破解率高，属于"劳动密集型但不保险"的手段。早在 2008 年，von Ahn 等人的 reCAPTCHA 论文就已说明：当时的 OCR 对扫描文字的错误率约为 20%，于是他们反过来把「人脑识别」打包成众包——人验证的同时顺便完成数字化任务<sup>[3]</sup>
 - 现状：已基本退出主流商业站点，多残留在老旧论坛系统（如一些传统 BBS 自建题）中
 
 ### 2.2 reCAPTCHA v2（"I'm not a robot" 复选框）
@@ -51,7 +51,7 @@ CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区�
 **代价**
 - 对真人：很低（多数情况一下点击）
 - 对程序：可通过大量预渲染模拟交互信号绕过——**它防的是"机械操作"，防不住"模拟真人"**
-- 局限：依赖服务端模型质量，且每年都被攻防拉锯
+- 局限：依赖服务端模型质量，且每年都被攻防拉锯。Bursztein 等人在 CHI 2014 的研究曾系统测过各类验证码的真实通过率（人类可到 95% 以上），并明确提出「验证码不应被孤立使用，而应与其他反滥用机制组合」——这几乎是后来所有厂商的设计共识<sup>[4]</sup>
 
 ### 2.3 hCaptcha
 
@@ -91,6 +91,7 @@ CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区�
 **代价**
 - 对真人：透明无感
 - 对程序：专门针对"自动化浏览器"的已知特征，需要持续对抗检测规则更新
+- 指纹的数学基础：Eckersley 在 2010 年的研究用 18.1 bits 熵描述浏览器指纹的信息量——在带 Flash/Java 的环境中，约 94.2% 的浏览器指纹是唯一的；这意味着「设备指纹」确实能撑起区分度，但同时也带来误伤与隐私问题<sup>[5]</sup>
 
 ---
 
@@ -110,7 +111,7 @@ CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区�
 
 ## 4. 演进规律总结
 
-1. **从"出题"到"检查"**：让真人做题的体验成本太高，商业站点全面转向"对程序做行为/环境评分"
+1. **从"出题"到"检查"**：让真人做题的体验成本太高，商业站点全面转向"对程序做行为/环境评分"。这背后有硬数据支撑：Bursztein 等人在 USENIX WOOT 2014 证明了「基于文字的传统验证码已到尽头」——通用机器学习方案在所有实测验证码上都超过了 1% 的不安全阈值（Yahoo 5.33%、eBay 3.7%、ReCaptcha 33.34% 等），文章标题直接叫《The End is Nigh》<sup>[6]</sup>；同年另一篇对音频验证码的系统研究也显示其成功率可达 45%-49%<sup>[7]</sup>
 2. **信誉成为新战场**：IP 信誉、设备信誉、账号历史信誉，正在替代"一道题"的作用
 3. **多因子组合 > 单点**：强站点往往"表单校验 + 无感挑战 + 后续验证流程"层层叠加（见第 2 篇）
 4. **没有银弹**：每一类都有各自的成本天花板——感知型伤体验、无感型依赖信誉、指纹型依赖特征库——这就是它们至今共存的原因
@@ -119,6 +120,20 @@ CAPTCHA 的存在意义只有一个：**在无需人工审计的前提下，区�
 
 - **可访问性与合规**：纯视觉 CAPTCHA 对残障用户是障碍；WCAG 与 GDPR/CCPA 都在倒逼厂商提供无障碍与隐私替代方案——这也是 Turnstile 这类"无感方案"被更多站点接纳的原因之一。
 - **成本不对称**：验证码厂商是"为全人类发题"，防御方永远在追赶；理解这一点，才会明白为什么"验证码+验证流程+策略"必须组合使用。
+
+---
+
+## 参考资料
+
+1. von Ahn, L., Blum, M., Hopper, N. J., & Langford, J. (2003). *CAPTCHA: Using Hard AI Problems for Security.* In: EUROCRYPT 2003, LNCS 2656, pp. 294–311. DOI: [10.1007/3-540-39200-9_18](https://doi.org/10.1007/3-540-39200-9_18)
+2. von Ahn, L., Blum, M., & Langford, J. (2004). *Telling Humans and Computers Apart Automatically.* Communications of the ACM, 47(2), 56–60. DOI: [10.1145/966389.966390](https://doi.org/10.1145/966389.966390)
+3. von Ahn, L., Maurer, B., McMillen, C., Abraham, D., & Blum, M. (2008). *reCAPTCHA: Human-Based Character Recognition via Web Security Measures.* Science, 322(5898), 1465–1468. DOI: [10.1126/science.1160379](https://doi.org/10.1126/science.1160379)
+4. Bursztein, E., Moscicki, A., Fabry, C., Bethard, S., Jurafsky, D., & Mitchell, J. C. (2014). *Easy Does It: More Usable CAPTCHAs.* In: Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI 2014). ACM.
+5. Eckersley, P. (2010). *How Unique Is Your Web Browser?* In: Privacy Enhancing Technologies (PETS 2010), LNCS 6205, pp. 1–18. DOI: [10.1007/978-3-642-14527-8_1](https://doi.org/10.1007/978-3-642-14527-8_1)
+6. Bursztein, E., et al. (2014). *The End is Nigh: Generic Solving of Text-based CAPTCHAs.* In: 8th USENIX Workshop on Offensive Technologies (WOOT 2014). USENIX.
+7. Bursztein, E., Beauxis, R., Paskov, H., Perito, D., Fabry, C., & Mitchell, J. (2011). *The Failure of Noise-Based Non-continuous Audio CAPTCHAs.* In: IEEE Symposium on Security and Privacy (S&P 2011), pp. 19–31. DOI: [10.1109/SP.2011.14](https://doi.org/10.1109/SP.2011.14)
+
+> 说明：以上文献均来自公开检索，仅作机制论述的佐证；标注形式遵循常见引用规范，页码/卷期以原刊为准。
 
 ---
 
